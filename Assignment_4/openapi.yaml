@@ -1,0 +1,178 @@
+openapi: 3.0.0
+info:
+  title: CampusEats Orders Service
+  version: 1.0.0
+  description: REST API for managing orders in CampusEats
+
+servers:
+  - url: http://localhost:5000/api
+
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order created successfully
+          headers:
+            Location:
+              description: URL of the created order
+              schema:
+                type: string
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '422':
+          description: Valid request but domain refused (e.g., unavailable menu item)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+    get:
+      summary: List orders for a user
+      parameters:
+        - in: query
+          name: userID
+          schema:
+            type: string
+          required: true
+          description: Filter orders by user ID
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+        '400':
+          description: Invalid query parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{orderID}:
+    get:
+      summary: Get a single order
+      parameters:
+        - in: path
+          name: orderID
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Order details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /orders/{orderID}/cancel:
+    post:
+      summary: Cancel an order
+      parameters:
+        - in: path
+          name: orderID
+          required: true
+          schema:
+            type: string
+      responses:
+        '202':
+          description: Order cancellation accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '404':
+          description: Order not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: State conflict (e.g., order already delivered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    OrderCreate:
+      type: object
+      required:
+        - userID
+        - vendorID
+        - orderItems
+      properties:
+        userID:
+          type: string
+        vendorID:
+          type: string
+        orderItems:
+          type: array
+          items:
+            type: object
+            required:
+              - menuID
+              - quantity
+            properties:
+              menuID:
+                type: string
+              quantity:
+                type: integer
+
+    Order:
+      type: object
+      properties:
+        orderID:
+          type: string
+        userID:
+          type: string
+        vendorID:
+          type: string
+        orderDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+        orderItems:
+          type: array
+          items:
+            type: object
+            properties:
+              menuID:
+                type: string
+              quantity:
+                type: integer
+
+    Error:
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
