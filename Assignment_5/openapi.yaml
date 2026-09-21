@@ -1,0 +1,314 @@
+openapi: 3.0.0
+info:
+  title: CampusEats Orders Service
+  version: 2.0.0
+  description: >
+    REST API for managing orders in CampusEats. Updated for Assignment 5
+    (HTTP Methods & Headers): field names below now match the real
+    implementation (customerId / items), not the earlier Assignment 4 draft
+    (userID / vendorID / orderItems), and every method/status/header here
+    was verified against a running instance (see curl-transcript.txt).
+
+servers:
+  - url: http://localhost:5000
+
+paths:
+  /orders:
+    post:
+      summary: Create a new order
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          required: false
+          schema:
+            type: string
+          description: Replays the original 201 response instead of creating a duplicate order.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderCreate'
+      responses:
+        '201':
+          description: Order created successfully
+          headers:
+            Location:
+              description: URL of the newly created order
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '400':
+          description: Malformed request body (missing customerId or items)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '401':
+          description: Missing or empty Authorization Bearer token
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Syntactically valid but domain-refused (e.g. order exceeds max items)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '429':
+          description: Per-client rate limit exceeded
+          headers:
+            Retry-After:
+              schema:
+                type: integer
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+    get:
+      summary: List orders, optionally filtered by status
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+          required: false
+          description: Filter orders by status (pending, cancelled, completed)
+      responses:
+        '200':
+          description: List of orders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Order'
+
+    options:
+      summary: Discover allowed methods for the orders collection
+      responses:
+        '204':
+          description: No content; Allow header lists supported methods
+          headers:
+            Allow:
+              schema:
+                type: string
+
+  /orders/{orderId}:
+    get:
+      summary: Get a single order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - in: header
+          name: If-None-Match
+          required: false
+          schema:
+            type: string
+          description: Enables a 304 Not Modified when the client's cached ETag is still current
+      responses:
+        '200':
+          description: Order details
+          headers:
+            ETag:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '304':
+          description: Not Modified — client's If-None-Match matched the current ETag
+        '404':
+          description: Order not found
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+    patch:
+      summary: Modify an order (requires a valid If-Match)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+        - in: header
+          name: If-Match
+          required: true
+          schema:
+            type: string
+          description: Must equal the order's current ETag or the write is rejected
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrderPatch'
+      responses:
+        '200':
+          description: Order updated
+          headers:
+            ETag:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Missing or empty Authorization Bearer token
+        '404':
+          description: Order not found
+        '412':
+          description: If-Match did not match the order's current ETag (lost-update prevention)
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '428':
+          description: If-Match header was not supplied at all
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+    delete:
+      summary: Delete an order
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '204':
+          description: Order deleted, no body
+        '401':
+          description: Missing or empty Authorization Bearer token
+        '404':
+          description: Order not found
+
+    options:
+      summary: Discover allowed methods for a single order
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '204':
+          description: No content; Allow header lists supported methods
+          headers:
+            Allow:
+              schema:
+                type: string
+
+  /orders/{orderId}/cancel:
+    post:
+      summary: Cancel an order (non-CRUD action, modeled as a sub-resource)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/OrderId'
+      responses:
+        '202':
+          description: Cancellation accepted (order was pending)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '200':
+          description: Already cancelled — repeat calls are retry-safe, not an error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+        '401':
+          description: Missing or empty Authorization Bearer token
+        '404':
+          description: Order not found
+        '409':
+          description: Conflict — completed orders cannot be cancelled
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Header handling only — no real token issuance/verification in this assignment.
+
+  parameters:
+    OrderId:
+      in: path
+      name: orderId
+      required: true
+      schema:
+        type: string
+
+  schemas:
+    OrderCreate:
+      type: object
+      required:
+        - customerId
+        - items
+      properties:
+        customerId:
+          type: string
+        items:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            type: string
+
+    OrderPatch:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+        customerId:
+          type: string
+        items:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [pending, cancelled, completed]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Problem:
+      type: object
+      description: RFC 7807-style problem details, served as application/problem+json
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string

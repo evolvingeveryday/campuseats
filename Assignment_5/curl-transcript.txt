@@ -1,0 +1,496 @@
+
+=================================================================
+1. CREATE — POST /orders  (expect 201 Created + Location)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token-123
+> Idempotency-Key: idem-key-001
+> Content-Length: 64
+> 
+} [64 bytes data]
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 18
+< Location: /orders/5103f202-5b53-452c-9ec0-d6faa958a940
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 205
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:05:21 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [205 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Masala Dosa","Filter Coffee"],"status":"pending","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:05:21.882Z"}
+
+=================================================================
+2. IDEMPOTENT REPEAT — same Idempotency-Key (expect identical 201 + same id, no new order created)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token-123
+> Idempotency-Key: idem-key-001
+> Content-Length: 64
+> 
+} [64 bytes data]
+< HTTP/1.1 201 Created
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 16
+< Location: /orders/5103f202-5b53-452c-9ec0-d6faa958a940
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 205
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:05:21 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [205 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Masala Dosa","Filter Coffee"],"status":"pending","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:05:21.882Z"}
+
+=================================================================
+3. FIRST GET — capture the ETag for this order (200 OK)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> GET /orders/5103f202-5b53-452c-9ec0-d6faa958a940 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 15
+< ETag: "37efbac392b080f100c0798b7031dcdaab061978"
+< Cache-Control: private, max-age=30, must-revalidate
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 205
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:05:30 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [205 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Masala Dosa","Filter Coffee"],"status":"pending","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:05:21.882Z"}
+
+=================================================================
+4. CONDITIONAL GET — If-None-Match: "37efbac392b080f100c0798b7031dcdaab061978" (expect 304 Not Modified, no body)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> GET /orders/5103f202-5b53-452c-9ec0-d6faa958a940 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> If-None-Match: "37efbac392b080f100c0798b7031dcdaab061978"
+> 
+< HTTP/1.1 304 Not Modified
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 13
+< ETag: "37efbac392b080f100c0798b7031dcdaab061978"
+< Cache-Control: private, max-age=30, must-revalidate
+< Date: Sat, 19 Sep 2026 12:05:30 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+* Connection #0 to host localhost left intact
+
+
+=================================================================
+5. CONDITIONAL WRITE — PATCH with a STALE If-Match (expect 412 Precondition Failed)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> PATCH /orders/5103f202-5b53-452c-9ec0-d6faa958a940 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token-123
+> If-Match: "stale-value-from-an-old-copy"
+> Content-Length: 18
+> 
+} [18 bytes data]
+< HTTP/1.1 412 Precondition Failed
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 12
+< Content-Type: application/problem+json; charset=utf-8
+< Content-Length: 153
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:05:30 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [153 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"precondition-failed","title":"Precondition Failed","status":412,"detail":"The resource has changed since you last read it. Re-fetch and retry."}
+
+=================================================================
+6. CONDITIONAL WRITE — PATCH with CURRENT If-Match (expect 200 OK, resource updated, ETag changes)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> PATCH /orders/5103f202-5b53-452c-9ec0-d6faa958a940 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token-123
+> If-Match: "37efbac392b080f100c0798b7031dcdaab061978"
+> Content-Length: 27
+> 
+} [27 bytes data]
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 9
+< ETag: "721a5749d15381271931a22e5aab17783c8e7937"
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 191
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:04 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [191 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Idli","Sambar"],"status":"pending","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:06:04.652Z"}
+
+=================================================================
+7. 400 Bad Request — malformed body (missing required 'items' array)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer demo-token-123
+> Content-Length: 24
+> 
+} [24 bytes data]
+< HTTP/1.1 400 Bad Request
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 8
+< Content-Type: application/problem+json; charset=utf-8
+< Content-Length: 116
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:04 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [116 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"validation-error","title":"Malformed Request Body","status":400,"detail":"Items must be a non-empty array"}
+
+=================================================================
+8. 404 Not Found — GET on an id that does not exist
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> GET /orders/does-not-exist-id HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 404 Not Found
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 7
+< Content-Type: application/problem+json; charset=utf-8
+< Content-Length: 114
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:04 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [114 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"not-found","title":"Resource Not Found","status":404,"detail":"No order found with ID does-not-exist-id"}
+
+=================================================================
+9. 401 Unauthorized — POST /orders with no Authorization header
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Content-Type: application/json
+> Content-Length: 39
+> 
+} [39 bytes data]
+< HTTP/1.1 401 Unauthorized
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 6
+< Content-Type: application/problem+json; charset=utf-8
+< Content-Length: 152
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:04 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [152 bytes data]
+* Connection #0 to host localhost left intact
+{"type":"unauthorized","title":"Unauthorized","status":401,"detail":"A non-empty 'Authorization: Bearer <token>' header is required for this endpoint."}
+
+=================================================================
+10. NON-CRUD ACTION — POST /orders/:id/cancel (expect 202 Accepted)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders/5103f202-5b53-452c-9ec0-d6faa958a940/cancel HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token-123
+> 
+< HTTP/1.1 202 Accepted
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 5
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 193
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [193 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Idli","Sambar"],"status":"cancelled","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:06:14.938Z"}
+
+=================================================================
+11. RETRY-SAFE CANCEL — same cancel repeated (expect 200 OK, not an error, no double side-effect)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> POST /orders/5103f202-5b53-452c-9ec0-d6faa958a940/cancel HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token-123
+> 
+< HTTP/1.1 200 OK
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 4
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 193
+< Vary: Accept-Encoding
+< Date: Sat, 19 Sep 2026 12:06:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [193 bytes data]
+* Connection #0 to host localhost left intact
+{"id":"5103f202-5b53-452c-9ec0-d6faa958a940","customerId":"user_42","items":["Idli","Sambar"],"status":"cancelled","createdAt":"2026-09-19T12:05:21.882Z","updatedAt":"2026-09-19T12:06:14.938Z"}
+
+=================================================================
+12. OPTIONS — discover allowed methods on a single resource
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> OPTIONS /orders/5103f202-5b53-452c-9ec0-d6faa958a940 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> 
+< HTTP/1.1 204 No Content
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 3
+< Allow: GET, PATCH, DELETE, OPTIONS
+< Date: Sat, 19 Sep 2026 12:06:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+* Connection #0 to host localhost left intact
+
+
+=================================================================
+13. CORS PREFLIGHT — browser on another origin (expect 204 + ACAO header)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> OPTIONS /orders HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Origin: https://campuseats-frontend.example.com
+> Access-Control-Request-Method: POST
+> 
+< HTTP/1.1 204 No Content
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< Date: Sat, 19 Sep 2026 12:06:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+* Connection #0 to host localhost left intact
+
+
+=================================================================
+14. DELETE — remove an order (expect 204 No Content)
+=================================================================
+* Host localhost:5000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+*   Trying 127.0.0.1:5000...
+* Connected to localhost (127.0.0.1) port 5000
+> DELETE /orders/0d02f497-f807-4c90-8a55-53d3aea23e57 HTTP/1.1
+> Host: localhost:5000
+> User-Agent: curl/8.5.0
+> Accept: */*
+> Authorization: Bearer demo-token-123
+> 
+< HTTP/1.1 204 No Content
+< X-Powered-By: Express
+< Access-Control-Allow-Origin: *
+< Access-Control-Allow-Headers: Content-Type, Authorization, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override
+< Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+< Access-Control-Expose-Headers: Location, ETag, X-RateLimit-Limit, X-RateLimit-Remaining, Retry-After, Allow
+< X-Content-Type-Options: nosniff
+< Strict-Transport-Security: max-age=63072000; includeSubDomains
+< X-RateLimit-Limit: 20
+< X-RateLimit-Remaining: 1
+< Date: Sat, 19 Sep 2026 12:06:14 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+* Connection #0 to host localhost left intact
