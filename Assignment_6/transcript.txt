@@ -1,0 +1,527 @@
+CS543 Web Services Assignment 6 — CampusEats Orders API
+Transcript generated: Mon Oct 12 17:48:17 UTC 2026
+Base URL: http://127.0.0.1:3419
+Commands use curl -sS -i so HTTP status, response headers and bodies are visible.
+The Bearer token is a coursework header-handling placeholder, not a real authentication system.
+
+
+===== D1 — Successful create: 201 + Location + JSON =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H Accept:\ application/json -H Idempotency-Key:\ a06-transcript-create-001 -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":2\}\]\,\"address\":\"Hostel\ Block\ A\,\ Room\ 12\"\,\"paymentMethod\":\"cash\"\}
+HTTP/1.1 201 Created
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 99
+Location: /orders/ord_0001
+ETag: "e36a3af4a7b8c3b17d1a571b"
+Cache-Control: no-store
+Content-Length: 271
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "id": "ord_0001",
+  "items": [
+    {
+      "itemId": "meal-01",
+      "qty": 2
+    }
+  ],
+  "address": "Hostel Block A, Room 12",
+  "paymentMethod": "cash",
+  "status": "pending",
+  "createdAt": "2026-10-12T17:48:17.431Z",
+  "updatedAt": "2026-10-12T17:48:17.431Z"
+}
+
+
+===== A5 regression — Repeating same Idempotency-Key returns same 201 resource =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H Accept:\ application/json -H Idempotency-Key:\ a06-transcript-create-001 -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":2\}\]\,\"address\":\"Hostel\ Block\ A\,\ Room\ 12\"\,\"paymentMethod\":\"cash\"\}
+HTTP/1.1 201 Created
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 98
+Location: /orders/ord_0001
+ETag: "e36a3af4a7b8c3b17d1a571b"
+Cache-Control: no-store
+Content-Length: 271
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "id": "ord_0001",
+  "items": [
+    {
+      "itemId": "meal-01",
+      "qty": 2
+    }
+  ],
+  "address": "Hostel Block A, Room 12",
+  "paymentMethod": "cash",
+  "status": "pending",
+  "createdAt": "2026-10-12T17:48:17.431Z",
+  "updatedAt": "2026-10-12T17:48:17.431Z"
+}
+
+
+===== A5 regression — Conditional GET returns 304 with no body =====
+$ curl -sS -i http://127.0.0.1:3419/orders/ord_0001 -H Authorization:\ Bearer\ demo-token -H If-None-Match:\ \"e36a3af4a7b8c3b17d1a571b\"
+HTTP/1.1 304 Not Modified
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 97
+ETag: "e36a3af4a7b8c3b17d1a571b"
+Cache-Control: private, max-age=0, must-revalidate
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+
+===== A5 regression — Stale conditional write returns 412 =====
+$ curl -sS -i -X PATCH http://127.0.0.1:3419/orders/ord_0001 -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H If-Match:\ \"old-etag\" -d \{\"status\":\"confirmed\"\}
+HTTP/1.1 412 Precondition Failed
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 96
+ETag: "e36a3af4a7b8c3b17d1a571b"
+Content-Length: 231
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/precondition-failed",
+  "title": "Precondition Failed",
+  "status": 412,
+  "detail": "The supplied If-Match ETag is stale. Fetch the current order and retry with its latest ETag."
+}
+
+
+===== D2 — Empty cart returns 422 empty-cart Problem Details =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{\"items\":\[\]\,\"address\":\"Hostel\ Block\ A\"\}
+HTTP/1.1 422 Unprocessable Entity
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+Content-Length: 266
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/empty-cart",
+  "title": "Empty Cart",
+  "status": 422,
+  "detail": "An order must contain at least one item.",
+  "errors": [
+    {
+      "field": "items",
+      "message": "must contain at least one item"
+    }
+  ]
+}
+
+
+===== D2 — Two invalid fields reported in one 422 =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":0\}\]\}
+HTTP/1.1 422 Unprocessable Entity
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 94
+Content-Length: 452
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/validation-error",
+  "title": "Validation Failed",
+  "status": 422,
+  "detail": "One or more request fields are invalid. Correct every field listed in errors and resubmit.",
+  "errors": [
+    {
+      "field": "items[0].qty",
+      "message": "must be an integer greater than or equal to 1"
+    },
+    {
+      "field": "address",
+      "message": "is required and must be a non-empty string"
+    }
+  ]
+}
+
+
+===== D2 — Unavailable item returns 422 item-unavailable =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{\"items\":\[\{\"itemId\":\"unavailable\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ A\"\}
+HTTP/1.1 422 Unprocessable Entity
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 93
+Content-Length: 289
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/item-unavailable",
+  "title": "Item Unavailable",
+  "status": 422,
+  "detail": "At least one requested item is currently unavailable.",
+  "errors": [
+    {
+      "field": "items",
+      "message": "contains an unavailable item"
+    }
+  ]
+}
+
+
+===== D2 — Declined payment returns 422 payment-declined =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ A\"\,\"paymentMethod\":\"declined\"\}
+HTTP/1.1 422 Unprocessable Entity
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 92
+Content-Length: 329
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/payment-declined",
+  "title": "Payment Declined",
+  "status": 422,
+  "detail": "The demo payment provider declined the payment. Use cash or card for a successful demo order.",
+  "errors": [
+    {
+      "field": "paymentMethod",
+      "message": "payment was declined"
+    }
+  ]
+}
+
+
+===== D2 — Illegal transition pending -> delivered returns 409 =====
+$ curl -sS -i -X PATCH http://127.0.0.1:3419/orders/ord_0001 -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{\"status\":\"delivered\"\}
+HTTP/1.1 409 Conflict
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 91
+Content-Length: 320
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/illegal-transition",
+  "title": "Illegal Order Transition",
+  "status": 409,
+  "detail": "An order in 'pending' cannot transition to 'delivered'.",
+  "errors": [
+    {
+      "field": "status",
+      "message": "transition pending -> delivered is not allowed"
+    }
+  ]
+}
+
+
+===== D2 — Malformed JSON returns 400 =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -d \{not-json
+HTTP/1.1 400 Bad Request
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 90
+Content-Length: 165
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/malformed-json",
+  "title": "Malformed JSON",
+  "status": 400,
+  "detail": "The request body must be valid JSON."
+}
+
+
+===== D2 — Missing Authorization returns 401 =====
+$ curl -sS -i http://127.0.0.1:3419/orders
+HTTP/1.1 401 Unauthorized
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+Content-Length: 186
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/unauthorized",
+  "title": "Unauthorized",
+  "status": 401,
+  "detail": "A non-empty Authorization: Bearer <token> header is required."
+}
+
+
+===== D2 — Unknown order returns 404 order-not-found =====
+$ curl -sS -i http://127.0.0.1:3419/orders/ord_9999 -H Authorization:\ Bearer\ demo-token
+HTTP/1.1 404 Not Found
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 89
+Content-Length: 166
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/order-not-found",
+  "title": "Order Not Found",
+  "status": 404,
+  "detail": "No order exists with id 'ord_9999'."
+}
+
+
+===== D3 — Accept: application/xml returns 406 because this implementation supports JSON only =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H Accept:\ application/xml -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ A\"\}
+HTTP/1.1 406 Not Acceptable
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 88
+Content-Length: 256
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/not-acceptable",
+  "title": "Not Acceptable",
+  "status": 406,
+  "detail": "This version of the service can produce application/json only; request Accept: application/json or */*. Do not retry unchanged."
+}
+
+
+===== A6 retry safety — 503 includes Retry-After =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H X-Demo-Force-503:\ 1 -d \{\"items\":\[\{\"itemId\":\"meal-01\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ A\"\}
+HTTP/1.1 503 Service Unavailable
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+Retry-After: 2
+Content-Length: 213
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/temporary-unavailable",
+  "title": "Service Unavailable",
+  "status": 503,
+  "detail": "The service is temporarily unavailable. Retry after the indicated delay."
+}
+
+
+===== A5 regression — OPTIONS reports Allow and CORS headers =====
+$ curl -sS -i -X OPTIONS http://127.0.0.1:3419/orders -H Origin:\ https://example.org -H Access-Control-Request-Method:\ POST
+HTTP/1.1 204 No Content
+Date: Mon, 12 Oct 2026 17:48:17 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+Allow: GET, POST, OPTIONS
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+
+
+===== A5 retry-safety — Simulated client timeout after server commit =====
+$ bash -c curl\ -sS\ --max-time\ 0.25\ -i\ -X\ POST\ \'http://127.0.0.1:3419/orders\'\ -H\ \'Authorization:\ Bearer\ demo-token\'\ -H\ \'Content-Type:\ application/json\'\ -H\ \'Idempotency-Key:\ a06-timeout-key\'\ -H\ \'X-Demo-Response-Delay-Ms:\ 1200\'\ -d\ \'\{\"items\":\[\{\"itemId\":\"meal-timeout\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ B\"\}\'\ \|\|\ true
+curl: (28) Operation timed out after 252 milliseconds with 0 bytes received
+
+
+===== A5 retry-safety — Retrying timed-out POST with same key returns original order =====
+$ curl -sS -i -X POST http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token -H Content-Type:\ application/json -H Idempotency-Key:\ a06-timeout-key -d \{\"items\":\[\{\"itemId\":\"meal-timeout\"\,\"qty\":1\}\]\,\"address\":\"Hostel\ Block\ B\"\}
+HTTP/1.1 201 Created
+Date: Mon, 12 Oct 2026 17:48:19 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 85
+Location: /orders/ord_0002
+ETag: "b7c95cc06e6e7be320f52f15"
+Cache-Control: no-store
+Content-Length: 267
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "id": "ord_0002",
+  "items": [
+    {
+      "itemId": "meal-timeout",
+      "qty": 1
+    }
+  ],
+  "address": "Hostel Block B",
+  "paymentMethod": "cash",
+  "status": "pending",
+  "createdAt": "2026-10-12T17:48:17.576Z",
+  "updatedAt": "2026-10-12T17:48:17.576Z"
+}
+
+
+===== D2 — Rate limit returns 429, Retry-After and per-client budget headers =====
+$ curl -sS -i http://127.0.0.1:3419/orders -H Authorization:\ Bearer\ demo-token
+HTTP/1.1 429 Too Many Requests
+Date: Mon, 12 Oct 2026 17:48:19 GMT
+Server: CampusEats-Order-Service
+Content-Type: application/problem+json; charset=utf-8
+X-Content-Type-Options: nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Methods: GET, POST, PATCH, DELETE, OPTIONS
+Access-Control-Allow-Headers: Authorization, Content-Type, Accept, Idempotency-Key, If-Match, If-None-Match, X-HTTP-Method-Override, X-Demo-Response-Delay-Ms, X-Demo-Force-503, X-Demo-Force-Internal-Error
+Access-Control-Expose-Headers: Location, ETag, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining
+Vary: Origin, Accept, Accept-Encoding
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 0
+Retry-After: 58
+Content-Length: 218
+Connection: keep-alive
+Keep-Alive: timeout=5
+
+{
+  "type": "https://campuseats.example/problems/rate-limit-exceeded",
+  "title": "Too Many Requests",
+  "status": 429,
+  "detail": "The per-client request budget has been exceeded. Retry after the indicated delay."
+}
+
+End of transcript.
+The timeout above is simulated using a development-only delay header; the server creates the order and saves the idempotency result before delaying the response.

@@ -1,0 +1,15 @@
+{
+  "name": "campuseats-orders-a06",
+  "version": "1.0.0",
+  "private": true,
+  "description": "CS543 Web Services Assignment 6 - CampusEats Orders API",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "transcript": "bash scripts/capture-transcript.sh"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,406 @@
+openapi: 3.1.0
+info:
+  title: CampusEats Orders API
+  version: 1.0.0
+  description: >-
+    CS543 Web Services Assignment 6 implementation of the existing CampusEats Orders service.
+    Errors use Problem Details. JSON is supported; XML Accept requests receive 406.
+servers:
+  - url: http://127.0.0.1:3000
+    description: Local development server (use HTTPS behind production TLS termination)
+tags:
+  - name: Orders
+    description: Create, list, read, update and delete orders
+  - name: Operations
+    description: Health and OPTIONS support
+paths:
+  /health:
+    get:
+      tags: [Operations]
+      summary: Check local service health
+      security: []
+      responses:
+        '200':
+          description: Service is responding
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, const: ok }
+                  service: { type: string }
+                required: [status, service]
+  /orders:
+    post:
+      tags: [Orders]
+      summary: Create an order
+      description: >-
+        Requires a non-empty items array, itemId and integer qty >= 1 for each item, and a non-empty address.
+        Idempotency-Key makes a retry return the original creation result rather than creating a duplicate.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+            examples:
+              validOrder:
+                value:
+                  items: [{ itemId: meal-01, qty: 2 }]
+                  address: Hostel Block A, Room 12
+                  paymentMethod: cash
+      responses:
+        '201':
+          description: Order created
+          headers:
+            Location:
+              description: Relative URI of the newly created order
+              schema: { type: string, example: /orders/ord_0001 }
+            ETag:
+              $ref: '#/components/headers/ETag'
+            Cache-Control:
+              $ref: '#/components/headers/CacheControl'
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+        '409':
+          description: Idempotency key was reused with a different body
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '413':
+          description: Request body is over the configured size limit
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '#/components/responses/ValidationOrDomainFailure' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+        '500': { $ref: '#/components/responses/InternalError' }
+        '503': { $ref: '#/components/responses/TemporaryUnavailable' }
+    get:
+      tags: [Orders]
+      summary: List, filter, sort and paginate orders
+      description: A safe read. All filtering, sorting and pagination are query parameters.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: status
+          schema: { $ref: '#/components/schemas/OrderStatus' }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [id, createdAt, status], default: createdAt }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: asc }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Page of orders
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Order' }
+                  pagination: { $ref: '#/components/schemas/Pagination' }
+                required: [data, pagination]
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    options:
+      tags: [Orders]
+      summary: List allowed methods and answer CORS preflight
+      security: []
+      responses:
+        '204':
+          description: Preflight answered; no response body
+          headers:
+            Allow:
+              schema: { type: string, example: 'GET, POST, OPTIONS' }
+            Access-Control-Allow-Origin:
+              schema: { type: string, example: '*' }
+            Access-Control-Allow-Methods:
+              schema: { type: string }
+  /orders/{orderId}:
+    parameters:
+      - in: path
+        name: orderId
+        required: true
+        schema: { type: string, example: ord_0001 }
+    get:
+      tags: [Orders]
+      summary: Get one order with conditional caching
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: If-None-Match
+          required: false
+          schema: { type: string }
+          description: If it matches the current ETag, the server returns 304 with no body.
+      responses:
+        '200':
+          description: Current order representation
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControl' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '304':
+          description: Current ETag matches; response has no body
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControl' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    patch:
+      tags: [Orders]
+      summary: Update order status
+      description: >-
+        Send If-Match with the latest ETag to prevent a stale update from overwriting a newer version.
+        A status change must follow the allowed state machine.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: If-Match
+          required: false
+          schema: { type: string }
+          description: If supplied and stale, the server returns 412 Precondition Failed.
+        - in: header
+          name: X-HTTP-Method-Override
+          required: false
+          schema: { type: string, enum: [PATCH] }
+          description: Optional fallback for constrained clients sending POST instead of PATCH.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { $ref: '#/components/schemas/OrderStatus' }
+              required: [status]
+              additionalProperties: false
+      responses:
+        '200':
+          description: Order updated
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+            Cache-Control: { $ref: '#/components/headers/CacheControl' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Order' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+        '409': { $ref: '#/components/responses/IllegalTransition' }
+        '412':
+          description: If-Match ETag is stale
+          headers:
+            ETag: { $ref: '#/components/headers/ETag' }
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '#/components/responses/ValidationOrDomainFailure' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    delete:
+      tags: [Orders]
+      summary: Delete a pending order
+      description: Returns 204 with no body. A non-pending order cannot be deleted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: header
+          name: X-HTTP-Method-Override
+          required: false
+          schema: { type: string, enum: [DELETE] }
+          description: Optional fallback for constrained clients sending POST instead of DELETE.
+      responses:
+        '204': { description: Order deleted; no response body. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/OrderNotFound' }
+        '406': { $ref: '#/components/responses/NotAcceptable' }
+        '409': { $ref: '#/components/responses/IllegalTransition' }
+        '429': { $ref: '#/components/responses/RateLimited' }
+    options:
+      tags: [Orders]
+      summary: List allowed methods and answer CORS preflight
+      security: []
+      responses:
+        '204':
+          description: Preflight answered; no response body
+          headers:
+            Allow:
+              schema: { type: string, example: 'GET, PATCH, DELETE, POST, OPTIONS' }
+            Access-Control-Allow-Origin:
+              schema: { type: string, example: '*' }
+            Access-Control-Allow-Methods:
+              schema: { type: string }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Header handling only for this coursework; no real token validation is implemented.
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: false
+      schema: { type: string, minLength: 1, maxLength: 200 }
+      description: Repeating the same key and same body returns the original create result.
+  headers:
+    ETag:
+      description: Entity tag for conditional reads and updates.
+      schema: { type: string, example: '"8ce5ab19dca7f30c22f4e3a9"' }
+    CacheControl:
+      description: Cache policy for the representation.
+      schema: { type: string, example: 'private, max-age=0, must-revalidate' }
+    RetryAfter:
+      description: Seconds the client should wait before retrying.
+      schema: { type: integer, example: 2 }
+  responses:
+    BadRequest:
+      description: Malformed JSON or invalid query parameters
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: Authorization Bearer header is missing or empty
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotAcceptable:
+      description: Requested response representation is unsupported
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    UnsupportedMediaType:
+      description: Request body must use application/json
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    ValidationOrDomainFailure:
+      description: Field validation or domain refusal
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    OrderNotFound:
+      description: Order ID does not exist
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    IllegalTransition:
+      description: Order state transition is not permitted
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    RateLimited:
+      description: Per-client rate limit exceeded
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+        X-RateLimit-Limit:
+          schema: { type: integer }
+        X-RateLimit-Remaining:
+          schema: { type: integer }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    InternalError:
+      description: Unexpected internal error; sensitive details are logged server-side only
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    TemporaryUnavailable:
+      description: Temporary service failure
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+  schemas:
+    CreateOrderRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            properties:
+              itemId: { type: string, minLength: 1 }
+              qty: { type: integer, minimum: 1 }
+            required: [itemId, qty]
+            additionalProperties: false
+        address: { type: string, minLength: 1 }
+        paymentMethod: { type: string, enum: [cash, card, declined], default: cash }
+      required: [items, address]
+      additionalProperties: false
+    Order:
+      type: object
+      properties:
+        id: { type: string, example: ord_0001 }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              itemId: { type: string }
+              qty: { type: integer, minimum: 1 }
+            required: [itemId, qty]
+        address: { type: string }
+        paymentMethod: { type: string, enum: [cash, card, declined] }
+        status: { $ref: '#/components/schemas/OrderStatus' }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+      required: [id, items, address, paymentMethod, status, createdAt, updatedAt]
+    OrderStatus:
+      type: string
+      enum: [pending, confirmed, preparing, ready, delivered, cancelled]
+    Pagination:
+      type: object
+      properties:
+        total: { type: integer, minimum: 0 }
+        page: { type: integer, minimum: 1 }
+        limit: { type: integer, minimum: 1, maximum: 100 }
+      required: [total, page, limit]
+    Problem:
+      type: object
+      description: Problem Details-style payload used for all error responses.
+      properties:
+        type: { type: string, format: uri, description: Stable problem type URI; final path segment is the catalogue key. }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+            required: [field, message]
+      required: [type, title, status, detail]

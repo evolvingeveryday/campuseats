@@ -1,0 +1,128 @@
+
+> campuseats-orders-a06@1.0.0 test
+> node --test
+
+TAP version 13
+# Subtest: health endpoint is reachable
+ok 1 - health endpoint is reachable
+  ---
+  duration_ms: 47.813109
+  type: 'test'
+  ...
+# Subtest: POST creates an order with 201, Location, JSON Content-Type and ETag
+ok 2 - POST creates an order with 201, Location, JSON Content-Type and ETag
+  ---
+  duration_ms: 14.195525
+  type: 'test'
+  ...
+# Subtest: same Idempotency-Key returns original result without duplicate order
+ok 3 - same Idempotency-Key returns original result without duplicate order
+  ---
+  duration_ms: 12.504828
+  type: 'test'
+  ...
+# Subtest: reusing Idempotency-Key with a different body returns 409
+ok 4 - reusing Idempotency-Key with a different body returns 409
+  ---
+  duration_ms: 8.987655
+  type: 'test'
+  ...
+# Subtest: empty cart returns 422 Problem Details with empty-cart type
+ok 5 - empty cart returns 422 Problem Details with empty-cart type
+  ---
+  duration_ms: 4.781066
+  type: 'test'
+  ...
+# Subtest: validation reports multiple field errors in one 422
+ok 6 - validation reports multiple field errors in one 422
+  ---
+  duration_ms: 5.746684
+  type: 'test'
+  ...
+# Subtest: unavailable item and declined payment are clean 422 domain errors
+ok 7 - unavailable item and declined payment are clean 422 domain errors
+  ---
+  duration_ms: 7.277644
+  type: 'test'
+  ...
+# Subtest: malformed JSON is 400, missing Authorization is 401 and XML Accept is 406
+ok 8 - malformed JSON is 400, missing Authorization is 401 and XML Accept is 406
+  ---
+  duration_ms: 8.278124
+  type: 'test'
+  ...
+# Subtest: unknown order returns 404 order-not-found
+ok 9 - unknown order returns 404 order-not-found
+  ---
+  duration_ms: 3.304628
+  type: 'test'
+  ...
+# Subtest: ETag supports conditional GET 304 and stale If-Match returns 412
+ok 10 - ETag supports conditional GET 304 and stale If-Match returns 412
+  ---
+  duration_ms: 5.058985
+  type: 'test'
+  ...
+# Subtest: illegal status transition returns 409; allowed transition changes ETag
+ok 11 - illegal status transition returns 409; allowed transition changes ETag
+  ---
+  duration_ms: 7.264153
+  type: 'test'
+  ...
+# Subtest: DELETE returns 204 and repeat/missing delete returns 404
+ok 12 - DELETE returns 204 and repeat/missing delete returns 404
+  ---
+  duration_ms: 5.10185
+  type: 'test'
+  ...
+# Subtest: rate limiting is per client and 429 includes Retry-After and rate headers
+ok 13 - rate limiting is per client and 429 includes Retry-After and rate headers
+  ---
+  duration_ms: 4.056423
+  type: 'test'
+  ...
+# [order-service] Internal error: Error: Demonstration-only internal failure: simulated database adapter failure
+#     at handle (/mnt/data/CS543_A06_CampusEats_Orders/src/server.js:272:83)
+#     at Server.<anonymous> (/mnt/data/CS543_A06_CampusEats_Orders/src/server.js:422:10)
+#     at Server.emit (node:events:518:28)
+#     at parserOnIncoming (node:_http_server:1153:12)
+#     at HTTPParser.parserOnHeadersComplete (node:_http_common:117:17)
+# Subtest: unexpected internal errors map to a clean 500 Problem Details response
+ok 14 - unexpected internal errors map to a clean 500 Problem Details response
+  ---
+  duration_ms: 4.811031
+  type: 'test'
+  ...
+# Subtest: 503 includes Retry-After and does not create an order
+ok 15 - 503 includes Retry-After and does not create an order
+  ---
+  duration_ms: 15.584051
+  type: 'test'
+  ...
+# Subtest: OPTIONS returns Allow and CORS; X-HTTP-Method-Override supports PATCH
+ok 16 - OPTIONS returns Allow and CORS; X-HTTP-Method-Override supports PATCH
+  ---
+  duration_ms: 6.061308
+  type: 'test'
+  ...
+# Subtest: list endpoint filters, sorts and paginates as a read
+ok 17 - list endpoint filters, sorts and paginates as a read
+  ---
+  duration_ms: 12.80053
+  type: 'test'
+  ...
+# Subtest: demo response delay commits once; retry with same key gets original order
+ok 18 - demo response delay commits once; retry with same key gets original order
+  ---
+  duration_ms: 7.433139
+  type: 'test'
+  ...
+1..18
+# tests 18
+# suites 0
+# pass 18
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 254.757261
