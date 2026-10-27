@@ -1,0 +1,21 @@
+services:
+  db:
+    image: mysql:8.4
+    container_name: campuseats-a07-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: campuseats_demo_pw
+      MYSQL_DATABASE: campuseats_graphql
+    ports:
+      - "3306:3306"
+    volumes:
+      - campuseats_mysql_data:/var/lib/mysql
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-pcampuseats_demo_pw"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  campuseats_mysql_data:
