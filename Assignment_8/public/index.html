@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CampusEats — Menu & Catalogue REST Service</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- Top Navigation Bar -->
+  <header class="app-header">
+    <div class="container header-container">
+      <div class="brand">
+        <span class="brand-icon">🍛</span>
+        <div>
+          <h1>CampusEats</h1>
+          <p class="subtitle">Catalogue Service &bull; CS543 Web Services Assignment 8</p>
+        </div>
+      </div>
+      <div class="api-status">
+        <span class="status-dot"></span>
+        <span class="status-text">REST API Active</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container main-content">
+    
+    <!-- Real-time Alert Banner -->
+    <div id="alert-banner" class="alert-banner" style="display: none;"></div>
+
+    <div class="grid-layout">
+      <!-- Left Column: Add Item Form + Item ID Lookup -->
+      <section class="panel form-panel">
+        <div class="panel-header">
+          <div class="panel-icon">➕</div>
+          <div>
+            <h2>Add New Menu Item</h2>
+            <p><code>POST /items</code> &bull; Validates JSON payload &amp; responds with 201</p>
+          </div>
+        </div>
+
+        <form id="add-item-form" class="item-form" novalidate>
+          <div class="form-group">
+            <label for="item-name">Item Name <span class="required">*</span></label>
+            <input type="text" id="item-name" name="name" placeholder="e.g. Paneer Butter Masala" required autocomplete="off">
+            <small class="field-hint">Required string (returns 422 if empty)</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group half">
+              <label for="item-price">Price (₹) <span class="required">*</span></label>
+              <input type="number" id="item-price" name="price" placeholder="e.g. 140" min="0" step="1" required>
+              <small class="field-hint">Non-negative number</small>
+            </div>
+
+            <div class="form-group half">
+              <label for="item-category">Category</label>
+              <select id="item-category" name="category">
+                <option value="Rolls &amp; Wraps">Rolls &amp; Wraps</option>
+                <option value="Burgers">Burgers</option>
+                <option value="Snacks &amp; Bites">Snacks &amp; Bites</option>
+                <option value="Meals">Meals</option>
+                <option value="Beverages">Beverages</option>
+                <option value="Desserts">Desserts</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="custom-checkbox">
+              <input type="checkbox" id="item-available" name="available" checked>
+              <span class="checkmark"></span>
+              <span class="checkbox-label">Available for immediate ordering</span>
+            </label>
+          </div>
+
+          <button type="submit" id="submit-btn" class="btn btn-primary">
+            <span>Add to Menu Catalogue</span>
+            <span class="btn-arrow">&rarr;</span>
+          </button>
+        </form>
+
+        <hr class="divider">
+
+        <!-- ID Lookup Demonstrating GET /items/:id -->
+        <div class="panel-header lookup-header">
+          <div class="panel-icon">🔍</div>
+          <div>
+            <h3>Fetch Item by ID</h3>
+            <p><code>GET /items/:id</code> &bull; Demonstrates 200 OK / 404 Not Found</p>
+          </div>
+        </div>
+
+        <div class="lookup-box">
+          <div class="lookup-input-group">
+            <input type="number" id="lookup-id" placeholder="Enter ID (e.g. 1, 2, 999)" min="1">
+            <button id="lookup-btn" class="btn btn-secondary" type="button">Fetch</button>
+          </div>
+          <div id="lookup-result" class="lookup-result"></div>
+        </div>
+      </section>
+
+      <!-- Right Column: Current Menu Catalogue Items List -->
+      <section class="panel catalogue-panel">
+        <div class="panel-header catalogue-header">
+          <div class="panel-title-row">
+            <div class="panel-icon">📋</div>
+            <div>
+              <h2>Menu Catalogue</h2>
+              <p><code>GET /items</code> &bull; Live list populated via client-side <code>fetch()</code></p>
+            </div>
+          </div>
+          <div class="catalogue-actions">
+            <span id="items-badge" class="badge badge-count">4 items</span>
+            <button id="refresh-btn" class="btn btn-outline" title="Refresh from API">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+
+        <!-- Catalogue Cards Container -->
+        <div id="items-container" class="items-grid">
+          <div class="loading-state">Loading catalogue items from API...</div>
+        </div>
+      </section>
+    </div>
+
+    <!-- API Reference Summary -->
+    <section class="api-summary-card">
+      <div class="summary-header">
+        <h3>⚡ CampusEats REST API Specification &amp; Status Code Outcomes</h3>
+      </div>
+      <div class="endpoints-grid">
+        <div class="endpoint-item">
+          <div class="endpoint-top">
+            <span class="method get">GET</span>
+            <code>/items</code>
+          </div>
+          <div class="status-tags">
+            <span class="status-pill status-200">200 OK</span>
+          </div>
+          <p>Fetches the list of all menu items from in-memory store.</p>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-top">
+            <span class="method get">GET</span>
+            <code>/items/:id</code>
+          </div>
+          <div class="status-tags">
+            <span class="status-pill status-200">200 OK</span>
+            <span class="status-pill status-404">404 Not Found</span>
+          </div>
+          <p>Fetches single item using route parameter <code>req.params.id</code>.</p>
+        </div>
+
+        <div class="endpoint-item">
+          <div class="endpoint-top">
+            <span class="method post">POST</span>
+            <code>/items</code>
+          </div>
+          <div class="status-tags">
+            <span class="status-pill status-201">201 Created</span>
+            <span class="status-pill status-422">422 Unprocessable</span>
+          </div>
+          <p>Creates new item from <code>req.body</code>. Validates required fields.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="container footer-content">
+      <p><strong>CampusEats REST Service</strong> &bull; CS543 Web Services &bull; IIIT Vadodara</p>
+      <p class="team-footer">
+        Team: Dipesh Mishra (20251651036) &bull; Suraj Ku. Saw (20251651092) &bull; Sandeep Parmar (20251651081) &bull; Vivek Kumar (20251651104)
+      </p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{
+  "name": "campuseats-catalogue-service",
+  "version": "1.0.0",
+  "description": "CampusEats Menu / Catalogue Service REST API - CS543 Web Services Assignment 8",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "keywords": [
+    "campuseats",
+    "rest-api",
+    "express",
+    "catalogue",
+    "cs543"
+  ],
+  "author": "Dipesh Mishra, Suraj Ku. Saw, Sandeep Parmar, Vivek Kumar",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}
