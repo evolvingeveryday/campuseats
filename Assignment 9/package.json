@@ -1,0 +1,27 @@
+{
+  "name": "campuseats-secured-api",
+  "version": "1.0.0",
+  "description": "CampusEats Secured API with JWT Authentication & Role-Based Access Control - CS543 Web Services Assignment 9",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node test-demo.js"
+  },
+  "keywords": [
+    "campuseats",
+    "jwt",
+    "bcrypt",
+    "rbac",
+    "express",
+    "rest-api",
+    "cs543"
+  ],
+  "author": "Dipesh Mishra, Suraj Ku. Saw, Sandeep Parmar, Vivek Kumar",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "dotenv": "^18.0.10",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3"
+  }
+}
